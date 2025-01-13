@@ -1,5 +1,5 @@
 import { styled } from '@mui/material/styles';
-import { TableCell, Select, TextField, Box, Button, TableContainer, ButtonProps } from '@mui/material';
+import { TableCell, Select, TextField, Box, Button, TableContainer, ButtonProps, Grid, Container, Paper } from '@mui/material';
 
 interface StyledTableCellProps {
   className?: string;
@@ -9,9 +9,10 @@ interface StyledTableCellProps {
 export const StyledTableCell = styled(TableCell)<StyledTableCellProps>(
   ({ theme }) => ({
     fontSize: '13px',
-    padding: '8px',
+    padding: '4px 8px',
     whiteSpace: 'nowrap',
     border: `0.25px solid #eeeeee`,
+    height: '40px',
     '&.MuiTableCell-head': {
       backgroundColor: '#f5f5f5',
       fontWeight: 500,
@@ -37,13 +38,14 @@ export const StyledTableCell = styled(TableCell)<StyledTableCellProps>(
 export const StyledSelect = styled(Select)({
   fontSize: '13px',
   '& .MuiSelect-select': {
-    padding: '6px',
+    padding: '2px 6px',
+    height: '31px',
   }
 });
 
 export const StyledTextField = styled(TextField)({
   '& .MuiOutlinedInput-root': {
-    height: '40px',
+    height: '35px',
     '& fieldset': {
       borderColor: '#E5E7EB',
     },
@@ -68,6 +70,7 @@ export const FilterGroup = styled(Box)({
     color: '#374151',
     fontSize: '14px',
     fontWeight: 500,
+    marginBottom: '4px',
   },
 });
 
@@ -101,7 +104,12 @@ export const LoadingOverlay = styled(Box)({
 
 export const TableWrapper = styled(Box)({
   position: 'relative',
-  minHeight: '400px',
+  height: '660px',
+  display: 'flex',
+  flexDirection: 'column',
+  backgroundColor: '#fff',
+  border: '1px solid #eeeeee',
+  borderRadius: '4px',
 });
 
 export const SearchButton = styled(Button)(({ theme }) => ({
@@ -119,18 +127,58 @@ export const HiddenInput = styled('input')({
 });
 
 export const TableContainerStyled = styled(TableContainer)({
-  minHeight: '400px'
+  height: '600px',
+  maxHeight: '600px',
+  overflow: 'auto',
+  '&::-webkit-scrollbar': {
+    width: '8px',
+    height: '8px',
+  },
+  '&::-webkit-scrollbar-thumb': {
+    backgroundColor: '#bdbdbd',
+    borderRadius: '4px',
+  },
 });
 
 export const PaginationBox = styled(Box)({
   display: 'flex',
   justifyContent: 'center',
-  marginTop: '16px',
-  marginBottom: '8px'
+  padding: '16px 0',
+  backgroundColor: '#fff',
+  borderTop: '1px solid #eeeeee',
+  marginTop: 'auto',
 });
 
 export const ErrorBox = styled(Box)(({ theme }) => ({
   color: theme.palette.error.main,
   textAlign: 'center',
   margin: '16px 0'
-})); 
+}));
+
+export const FilterContainer = styled(Grid)(({ theme }) => ({
+  backgroundColor: '#fff',
+  padding: '8px 16px',
+  marginBottom: '2.0px',
+  justifyContent: 'space-between',
+}));
+
+export const FilterSelect = styled(StyledSelect)(({ theme }) => ({
+  backgroundColor: '#fff',
+  height: '40px'
+}));
+
+export const ButtonContainer = styled(Grid)(({ theme }) => ({
+  display: 'flex', 
+  justifyContent: 'flex-end', 
+  gap: '8px',
+  marginBottom: '8px',
+}));
+
+export const PageContainer = styled(Container)({
+  padding: '3px',
+});
+
+export const PagePaper = styled(Paper)({
+  padding: '16px',
+  backgroundColor: '#f5f5f5',
+}); 

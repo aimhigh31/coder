@@ -24,98 +24,24 @@ import {
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import * as XLSX from 'xlsx';
-
-const StyledTableCell = styled(TableCell)(({ theme }) => ({
-  fontSize: '13px',
-  padding: '8px',
-  whiteSpace: 'nowrap',
-  border: `0.25px solid #eeeeee`,
-  '&.electronic-code': {
-    width: '180px',
-    minWidth: '180px',
-    maxWidth: '180px',
-    backgroundColor: '#e3f2fd',
-  },
-  '&.item-type': {
-    width: '100px',
-    minWidth: '100px',
-    maxWidth: '100px',
-  },
-  '&.item-name': {
-    width: '300px',
-    minWidth: '300px',
-  },
-  '&.MuiTableCell-head': {
-    backgroundColor: '#f5f5f5',
-    fontWeight: 500,
-  }
-}));
-
-const StyledSelect = styled(Select)(({ theme }) => ({
-  fontSize: '13px',
-  '& .MuiSelect-select': {
-    padding: '6px',
-  },
-  '&.revision-select': {
-    '& .MuiMenu-paper': {
-      maxHeight: '200px'
-    }
-  }
-}));
-
-const StyledTextField = styled(TextField)(({ theme }) => ({
-  '& .MuiInputBase-input': {
-    fontSize: '13px',
-    padding: '6px',
-  },
-}));
-
-const FilterGroup = styled(Box)(({ theme }) => ({
-  display: 'flex',
-  flexDirection: 'column',
-  gap: '8px',
-}));
-
-const ControlButton = styled(Button)(({ theme }) => ({
-  marginLeft: '8px',
-  fontSize: '13px',
-}));
-
-const ExcelButton = styled(Button)(({ theme }) => ({
-  marginLeft: '8px',
-  fontSize: '13px',
-  backgroundColor: '#4caf50',
-  '&:hover': {
-    backgroundColor: '#388e3c',
-  },
-}));
-
-const LoadingOverlay = styled(Box)(({ theme }) => ({
-  position: 'absolute',
-  top: 0,
-  left: 0,
-  right: 0,
-  bottom: 0,
-  backgroundColor: 'rgba(255, 255, 255, 0.7)',
-  display: 'flex',
-  justifyContent: 'center',
-  alignItems: 'center',
-  zIndex: 1,
-}));
-
-const TableWrapper = styled(Box)(({ theme }) => ({
-  position: 'relative',
-  minHeight: '400px',
-}));
-
-const SearchButton = styled(Button)(({ theme }) => ({
-  height: '31px',
-  backgroundColor: '#6c757d',
-  minWidth: '120px',
-  '&:hover': {
-    backgroundColor: '#5a6268',
-  },
-}));
+import { 
+  StyledTableCell, 
+  StyledSelect, 
+  StyledTextField,
+  FilterGroup,
+  ControlButton,
+  ExcelButton,
+  LoadingOverlay,
+  TableWrapper,
+  TableContainerStyled,
+  PaginationBox,
+  ErrorBox,
+  FilterContainer,
+  FilterSelect,
+  ButtonContainer,
+  PageContainer,
+  PagePaper,
+} from '../styles/components';
 
 export default function NexplusCoder() {
   const [rows, setRows] = useState<any[]>([]);
@@ -131,7 +57,7 @@ export default function NexplusCoder() {
     model: '',
   });
   const [page, setPage] = useState(1);
-  const rowsPerPage = 10;
+  const rowsPerPage = 12;
   const [originalRows, setOriginalRows] = useState<any[]>([]);
   const [filteredRows, setFilteredRows] = useState<any[]>([]);
 
@@ -144,6 +70,10 @@ export default function NexplusCoder() {
   useEffect(() => {
     fetchItems();
   }, []);
+
+  useEffect(() => {
+    setPage(totalPages);
+  }, [totalPages]);
 
   useEffect(() => {
     filterRows();
@@ -160,8 +90,11 @@ export default function NexplusCoder() {
         throw new Error(result.error || 'Failed to fetch items');
       }
       
-      setOriginalRows(result.data);
-      setRows(result.data);
+      const sortedData = result.data.sort((a: any, b: any) => a.no - b.no);
+      setOriginalRows(sortedData);
+      setRows(sortedData);
+      const lastPage = Math.ceil(sortedData.length / rowsPerPage);
+      setPage(lastPage);
     } catch (error) {
       console.error('Fetch error:', error);
       setError(error instanceof Error ? error.message : 'An error occurred');
@@ -259,7 +192,12 @@ export default function NexplusCoder() {
         author: ''
       };
 
-      setRows(prev => [newRow, ...prev]);
+      setRows(prev => {
+        const updatedRows = [...prev, newRow].sort((a, b) => a.no - b.no);
+        const newLastPage = Math.ceil(updatedRows.length / rowsPerPage);
+        setPage(newLastPage);
+        return updatedRows;
+      });
       setError(null);
     } catch (error) {
       console.error('Failed to add item:', error);
@@ -578,7 +516,7 @@ export default function NexplusCoder() {
                   <CircularProgress />
                 </LoadingOverlay>
               )}
-              <TableContainer sx={{ minHeight: '400px' }}>
+              <TableContainerStyled>
                 <Table size="small" stickyHeader>
                   <TableHead>
                     <TableRow>
@@ -757,10 +695,10 @@ export default function NexplusCoder() {
                     ))}
                   </TableBody>
                 </Table>
-              </TableContainer>
+              </TableContainerStyled>
 
               {totalPages > 1 && (
-                <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2, mb: 1 }}>
+                <PaginationBox>
                   <Pagination
                     count={totalPages}
                     page={page}
@@ -769,7 +707,7 @@ export default function NexplusCoder() {
                     showFirstButton
                     showLastButton
                   />
-                </Box>
+                </PaginationBox>
               )}
             </TableWrapper>
 

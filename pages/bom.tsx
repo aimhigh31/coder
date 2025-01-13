@@ -26,14 +26,17 @@ import {
   StyledTableCell, 
   StyledSelect, 
   StyledTextField, 
-  FilterGroup, 
+  FilterGroup,
   ControlButton,
   ExcelButton,
   LoadingOverlay,
   TableWrapper,
   TableContainerStyled,
   PaginationBox,
-  ErrorBox
+  ErrorBox,
+  FilterContainer,
+  FilterSelect,
+  ButtonContainer,
 } from '../styles/components';
 import * as XLSX from 'xlsx';
 import styled from '@emotion/styled';
@@ -53,6 +56,8 @@ interface BomItem {
   unit: string;
   process: string;
   note: string;
+  author: string;
+  updatedAt: string;
 }
 
 interface CodeItem {
@@ -82,7 +87,7 @@ export default function BomPage() {
   const [error, setError] = useState<string | null>(null);
   const [codeItems, setCodeItems] = useState<CodeItem[]>([]);
   const [page, setPage] = useState(1);
-  const rowsPerPage = 11;  // 한 페이지당 11개 행
+  const rowsPerPage = 12;  // 한 페이지당 12개 행
   const [filters, setFilters] = useState({
     itemType: '',
     level: '',
@@ -114,7 +119,7 @@ export default function BomPage() {
         (!filters.model || row.model.toLowerCase().includes(filters.model.toLowerCase()))
       );
     });
-    setFilteredRows(filtered);
+    setFilteredRows(filtered.sort((a, b) => a.no - b.no));
   };
 
   const handleSelectChange = (field: FilterKeys) => (event: SelectChangeEvent<unknown>) => {
@@ -157,6 +162,10 @@ export default function BomPage() {
     setLoading(false);
   }, []);
 
+  useEffect(() => {
+    setPage(totalPages);
+  }, [totalPages]);
+
   const fetchCodeItems = async () => {
     try {
       const response = await fetch('/api/items');
@@ -177,7 +186,10 @@ export default function BomPage() {
       const response = await fetch('/api/bom');
       const result = await response.json();
       if (result.success) {
-        setRows(sortBomItems(result.data));
+        const sortedData = result.data.sort((a: BomItem, b: BomItem) => a.no - b.no);
+        setRows(sortedData);
+        const lastPage = Math.ceil(sortedData.length / rowsPerPage);
+        setPage(lastPage);
       }
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Failed to fetch BOM items';
@@ -241,17 +253,20 @@ export default function BomPage() {
         unit: '',
         process: '',
         note: '',
+        author: '',
+        updatedAt: '',
       };
 
-      setRows(prev => sortBomItems([...prev, newRow]));
+      setRows(prev => {
+        const updatedRows = [...prev, newRow].sort((a, b) => a.no - b.no);
+        const newLastPage = Math.ceil(updatedRows.length / rowsPerPage);
+        setPage(newLastPage);
+        return updatedRows;
+      });
       setError(null);
     } finally {
       setLoading(false);
     }
-  };
-
-  const sortBomItems = (items: BomItem[]) => {
-    return [...items].sort((a, b) => b.no - a.no);
   };
 
   const handleRemoveRows = async () => {
@@ -428,7 +443,18 @@ export default function BomPage() {
   const handleRowChange = (id: string, field: keyof BomItem, value: string | number) => {
     setRows(prev => prev.map(row => {
       if (row._id === id) {
-        return { ...row, [field]: value };
+        const now = new Date();
+        const year = now.getFullYear();
+        const month = String(now.getMonth() + 1).padStart(2, '0');
+        const day = String(now.getDate()).padStart(2, '0');
+        const hour = String(now.getHours()).padStart(2, '0');
+        const minute = String(now.getMinutes()).padStart(2, '0');
+        const formattedDate = `${year}-${month}-${day} ${hour}:${minute}`;
+        return { 
+          ...row, 
+          [field]: value,
+          updatedAt: formattedDate
+        };
       }
       return row;
     }));
@@ -474,17 +500,7 @@ export default function BomPage() {
         <Grid container spacing={2}>
           {/* 필터 영역 */}
           <Grid item xs={12}>
-            <Grid 
-              container 
-              spacing={2} 
-              alignItems="flex-end"
-              sx={{
-                backgroundColor: '#fff',
-                padding: '8px 16px',
-                marginBottom: '2px',
-                justifyContent: 'space-between',
-              }}
-            >
+            <FilterContainer container spacing={2} alignItems="flex-end">
               <Grid item xs={1.5}>
                 <FilterGroup>
                   <InputLabel>품목유형</InputLabel>
@@ -602,11 +618,11 @@ export default function BomPage() {
                   필터 초기화
                 </ControlButton>
               </Grid>
-            </Grid>
+            </FilterContainer>
           </Grid>
 
           {/* 버튼 영역 */}
-          <Grid item xs={12} sx={{ display: 'flex', justifyContent: 'flex-end', gap: 1 }}>
+          <ButtonContainer item xs={12}>
             <ControlButton variant="contained" onClick={handleAddRow}>행 추가</ControlButton>
             <ControlButton variant="contained" onClick={handleRemoveRows}>행 제거</ControlButton>
             <ControlButton variant="contained" onClick={saveData}>저장</ControlButton>
@@ -624,7 +640,7 @@ export default function BomPage() {
                 onChange={handleExcelUpload}
               />
             </ExcelButton>
-          </Grid>
+          </ButtonContainer>
 
           {/* 테이블 */}
           <Grid item xs={12}>
@@ -651,6 +667,8 @@ export default function BomPage() {
                       <StyledTableCell>단위</StyledTableCell>
                       <StyledTableCell>공정</StyledTableCell>
                       <StyledTableCell>비고</StyledTableCell>
+                      <StyledTableCell>등록자</StyledTableCell>
+                      <StyledTableCell>수정일시</StyledTableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
@@ -658,8 +676,17 @@ export default function BomPage() {
                       <TableRow 
                         key={row._id}
                         sx={{
+                          backgroundColor: row.itemType === '제품' 
+                            ? 'rgba(33, 150, 243, 0.05)'  // 옅은 파란색
+                            : row.itemType === '반제품'
+                            ? 'rgba(76, 175, 80, 0.05)'   // 옅은 녹색
+                            : 'inherit',
                           '&:hover': {
-                            backgroundColor: 'rgba(0, 0, 0, 0.04)',
+                            backgroundColor: row.itemType === '제품'
+                              ? 'rgba(33, 150, 243, 0.1)'  // hover 시 좀 더 진한 파란색
+                              : row.itemType === '반제품'
+                              ? 'rgba(76, 175, 80, 0.1)'   // hover 시 좀 더 진한 녹색
+                              : 'rgba(0, 0, 0, 0.04)',
                             transition: 'background-color 0.2s ease'
                           },
                           cursor: 'default'
@@ -740,6 +767,23 @@ export default function BomPage() {
                             value={row.note}
                             onChange={(e) => row._id && handleRowChange(row._id, 'note', e.target.value)}
                           />
+                        </StyledTableCell>
+                        <StyledTableCell>
+                          <StyledTextField
+                            value={row.author || ''}
+                            onChange={(e) => row._id && handleRowChange(row._id, 'author', e.target.value)}
+                          />
+                        </StyledTableCell>
+                        <StyledTableCell>
+                          {row.updatedAt || (() => {
+                            const now = new Date();
+                            const year = now.getFullYear();
+                            const month = String(now.getMonth() + 1).padStart(2, '0');
+                            const day = String(now.getDate()).padStart(2, '0');
+                            const hour = String(now.getHours()).padStart(2, '0');
+                            const minute = String(now.getMinutes()).padStart(2, '0');
+                            return `${year}-${month}-${day} ${hour}:${minute}`;
+                          })()}
                         </StyledTableCell>
                       </TableRow>
                     ))}
