@@ -36,6 +36,8 @@ import {
   ErrorBox
 } from '../styles/components';
 import * as XLSX from 'xlsx';
+import styled from '@emotion/styled';
+import CodeSearchPopup from '../components/CodeSearchPopup';
 
 interface BomItem {
   _id?: string;
@@ -44,6 +46,7 @@ interface BomItem {
   model: string;
   itemType: string;
   level: number;
+  parentCode: string;
   electronicCode: string;
   itemName: string;
   quantity: number;
@@ -60,7 +63,17 @@ interface CodeItem {
   model: string;
   unit: string;
   itemType: string;
+  status: string;
 }
+
+const SearchButton = styled(Button)(({ theme }) => ({
+  height: '40px',
+  backgroundColor: '#6c757d',
+  minWidth: '120px',
+  '&:hover': {
+    backgroundColor: '#5a6268',
+  },
+}));
 
 export default function BomPage() {
   const [rows, setRows] = useState<BomItem[]>([]);
@@ -79,12 +92,50 @@ export default function BomPage() {
     industry: '',
     model: '',
   });
+  const [isCodeSearchOpen, setIsCodeSearchOpen] = useState(false);
+  const [isParentCodeSearchOpen, setIsParentCodeSearchOpen] = useState(false);
+  const [selectedRowForCode, setSelectedRowForCode] = useState<string | null>(null);
+  const [selectedRowForParentCode, setSelectedRowForParentCode] = useState<string | null>(null);
+  const [filteredRows, setFilteredRows] = useState<BomItem[]>([]);
+
+  useEffect(() => {
+    filterRows();
+  }, [filters, rows]);
+
+  const filterRows = () => {
+    const filtered = rows.filter(row => {
+      return (
+        (!filters.itemType || row.itemType === filters.itemType) &&
+        (!filters.level || row.level === Number(filters.level)) &&
+        (!filters.electronicCode || row.electronicCode.toLowerCase().includes(filters.electronicCode.toLowerCase())) &&
+        (!filters.itemName || row.itemName.toLowerCase().includes(filters.itemName.toLowerCase())) &&
+        (!filters.process || row.process.toLowerCase().includes(filters.process.toLowerCase())) &&
+        (!filters.industry || row.industry.toLowerCase().includes(filters.industry.toLowerCase())) &&
+        (!filters.model || row.model.toLowerCase().includes(filters.model.toLowerCase()))
+      );
+    });
+    setFilteredRows(filtered);
+  };
+
+  const handleSelectChange = (field: FilterKeys) => (event: SelectChangeEvent<unknown>) => {
+    setFilters(prev => ({
+      ...prev,
+      [field]: event.target.value as string
+    }));
+  };
+
+  const handleTextFieldChange = (field: FilterKeys) => (event: React.ChangeEvent<HTMLInputElement>) => {
+    setFilters(prev => ({
+      ...prev,
+      [field]: event.target.value
+    }));
+  };
 
   // 전체 페이지 수 계산
-  const totalPages = Math.ceil(rows.length / rowsPerPage);
+  const totalPages = Math.ceil(filteredRows.length / rowsPerPage);
   
   // 현재 페이지에 표시할 행들
-  const displayedRows = rows.slice(
+  const displayedRows = filteredRows.slice(
     (page - 1) * rowsPerPage,
     page * rowsPerPage
   );
@@ -138,6 +189,16 @@ export default function BomPage() {
   const handleCodeSelect = (rowId: string, code: string) => {
     const selectedCode = codeItems.find(item => item.electronicCode === code);
     if (selectedCode) {
+      // 산업군 코드를 전체 텍스트로 변환
+      const getFullIndustryName = (code: string) => {
+        switch (code) {
+          case 'E': return 'E 전기차';
+          case 'H': return 'H 수소';
+          case 'I': return 'I IT';
+          default: return code;
+        }
+      };
+
       console.log('Selected code data:', selectedCode);
       setRows(prev => prev.map(row => {
         if (row._id === rowId) {
@@ -146,7 +207,7 @@ export default function BomPage() {
             electronicCode: code,
             itemName: selectedCode.itemName,
             unit: selectedCode.unit,
-            industry: selectedCode.industry,
+            industry: getFullIndustryName(selectedCode.industry),
             model: selectedCode.model,
             itemType: selectedCode.itemType,
           } as BomItem;
@@ -173,6 +234,7 @@ export default function BomPage() {
         model: '',
         itemType: '제품',
         level: 1,
+        parentCode: '',
         electronicCode: '',
         itemName: '',
         quantity: 0,
@@ -219,18 +281,21 @@ export default function BomPage() {
       const newRows = rows.filter(row => row._id?.startsWith('temp-'));
       const existingRows = rows.filter(row => row._id && !row._id.startsWith('temp-'));
 
+      // 새 행 저장
       if (newRows.length > 0) {
         for (const row of newRows) {
           if (!row.electronicCode || !row.itemName) {
             throw new Error(`행 ${row.no}: 전산코드와 품목명은 필수 입력 항목입니다.`);
           }
 
+          // 명시적으로 모든 필드를 포함
           const newItem = {
             no: row.no,
             industry: row.industry || '',
             model: row.model || '',
             itemType: row.itemType || '제품',
             level: row.level || 1,
+            parentCode: row.parentCode || '',  // 상위코드
             electronicCode: row.electronicCode,
             itemName: row.itemName,
             quantity: row.quantity || 0,
@@ -252,28 +317,47 @@ export default function BomPage() {
         }
       }
 
+      // 기존 행 업데이트
       if (existingRows.length > 0) {
-        const updatePromises = existingRows.map(row => {
+        const updatePromises = existingRows.map(async row => {
           if (!row.electronicCode || !row.itemName) {
             throw new Error(`행 ${row.no}: 전산코드와 품목명은 필수 입력 항목입니다.`);
           }
 
-          return fetch(`/api/bom/${row._id}`, {
+          // 명시적으로 모든 필드를 포함
+          const updateData = {
+            no: row.no,
+            industry: row.industry || '',
+            model: row.model || '',
+            itemType: row.itemType || '제품',
+            level: row.level || 1,
+            parentCode: row.parentCode || '',  // 상위코드
+            electronicCode: row.electronicCode,
+            itemName: row.itemName,
+            quantity: row.quantity || 0,
+            unit: row.unit || 'EA',
+            process: row.process || '',
+            note: row.note || ''
+          };
+
+          const response = await fetch(`/api/bom/${row._id}`, {
             method: 'PUT',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(row),
+            body: JSON.stringify(updateData),
           });
+
+          if (!response.ok) {
+            const result = await response.json();
+            throw new Error(result.error || `행 ${row.no} 업데이트 실패`);
+          }
+
+          return response;
         });
 
-        const responses = await Promise.all(updatePromises);
-        const failedUpdates = responses.filter(response => !response.ok);
-        
-        if (failedUpdates.length > 0) {
-          throw new Error('일부 행 업데이트에 실패했습니다.');
-        }
+        await Promise.all(updatePromises);
       }
 
-      await fetchBomItems();
+      await fetchBomItems();  // 데이터 새로고침
       setError(null);
       alert('저장되었습니다.');
     } catch (error) {
@@ -350,41 +434,38 @@ export default function BomPage() {
     }));
   };
 
-  const handleTextFieldChange = (field: FilterKeys) => (
-    event: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
-  ) => {
-    setFilters({ ...filters, [field]: event.target.value });
+  const handleCodeSearchOpen = (rowId: string) => {
+    setSelectedRowForCode(rowId);
+    setIsCodeSearchOpen(true);
   };
 
-  const handleFilterChange = (field: FilterKeys) => (
-    event: SelectChangeEvent<unknown>
-  ) => {
-    setFilters({ ...filters, [field]: event.target.value });
-  };
-
-  const handleSearch = async () => {
-    try {
-      setLoading(true);
-      // URL 파라미터로 필터 조건 전달
-      const queryParams = new URLSearchParams(
-        Object.entries(filters)
-          .filter(([_, value]) => value !== '')
-          .map(([key, value]) => [key, value.toString()])
-      ).toString();
-
-      const response = await fetch(`/api/bom?${queryParams}`);
-      const result = await response.json();
-
-      if (result.success) {
-        setRows(result.data.sort((a: BomItem, b: BomItem) => b.no - a.no));
-        setError(null);
-      }
-    } catch (error) {
-      setError(error instanceof Error ? error.message : 'Failed to fetch filtered data');
-      console.error('Search error:', error);
-    } finally {
-      setLoading(false);
+  const handleCodeSearchSelect = (code: string) => {
+    if (selectedRowForCode) {
+      handleCodeSelect(selectedRowForCode, code);
     }
+    setIsCodeSearchOpen(false);
+    setSelectedRowForCode(null);
+  };
+
+  const handleParentCodeSearchOpen = (rowId: string) => {
+    setSelectedRowForParentCode(rowId);
+    setIsParentCodeSearchOpen(true);
+  };
+
+  const handleParentCodeSelect = (code: string) => {
+    if (selectedRowForParentCode) {
+      setRows(prev => prev.map(row => {
+        if (row._id === selectedRowForParentCode) {
+          return {
+            ...row,
+            parentCode: code
+          };
+        }
+        return row;
+      }));
+    }
+    setIsParentCodeSearchOpen(false);
+    setSelectedRowForParentCode(null);
   };
 
   return (
@@ -400,7 +481,7 @@ export default function BomPage() {
               sx={{
                 backgroundColor: '#fff',
                 padding: '8px 16px',
-                marginBottom: '16px',
+                marginBottom: '2px',
                 justifyContent: 'space-between',
               }}
             >
@@ -414,7 +495,7 @@ export default function BomPage() {
                         height: '40px'
                       }}
                       value={filters.itemType}
-                      onChange={handleFilterChange('itemType')}
+                      onChange={handleSelectChange('itemType')}
                     >
                       <MenuItem value="">전체</MenuItem>
                       <MenuItem value="제품">제품</MenuItem>
@@ -455,7 +536,7 @@ export default function BomPage() {
                     <StyledSelect
                       sx={{ minWidth: '150px' }}
                       value={filters.level}
-                      onChange={handleFilterChange('level')}
+                      onChange={handleSelectChange('level')}
                     >
                       <MenuItem value="">전체</MenuItem>
                       {[1,2,3,4,5,6,7,8,9,10].map(level => (
@@ -498,23 +579,27 @@ export default function BomPage() {
                   />
                 </FilterGroup>
               </Grid>
-              <Grid item xs="auto">
+              <Grid item xs={1.2}>
                 <ControlButton 
                   variant="contained" 
-                  onClick={handleSearch}
-                  sx={{ 
-                    height: '40px',
+                  onClick={() => setFilters({
+                    itemType: '',
+                    level: '',
+                    electronicCode: '',
+                    itemName: '',
+                    process: '',
+                    industry: '',
+                    model: '',
+                  })}
+                  sx={{
                     backgroundColor: '#6c757d',
-                    color: 'white',
                     '&:hover': {
                       backgroundColor: '#5a6268',
                     },
-                    minWidth: '120px',
-                    borderRadius: '4px',
-                    marginLeft: '8px'
                   }}
+                  fullWidth
                 >
-                  조회
+                  필터 초기화
                 </ControlButton>
               </Grid>
             </Grid>
@@ -559,8 +644,9 @@ export default function BomPage() {
                       <StyledTableCell>모델</StyledTableCell>
                       <StyledTableCell>품목유형</StyledTableCell>
                       <StyledTableCell>LEVEL</StyledTableCell>
+                      <StyledTableCell className="electronic-code">상위코드</StyledTableCell>
                       <StyledTableCell className="electronic-code">전산코드</StyledTableCell>
-                      <StyledTableCell className="item-name">품목명</StyledTableCell>
+                      <StyledTableCell>품목명</StyledTableCell>
                       <StyledTableCell>소요량</StyledTableCell>
                       <StyledTableCell>단위</StyledTableCell>
                       <StyledTableCell>공정</StyledTableCell>
@@ -569,7 +655,16 @@ export default function BomPage() {
                   </TableHead>
                   <TableBody>
                     {displayedRows.map((row) => (
-                      <TableRow key={row._id}>
+                      <TableRow 
+                        key={row._id}
+                        sx={{
+                          '&:hover': {
+                            backgroundColor: 'rgba(0, 0, 0, 0.04)',
+                            transition: 'background-color 0.2s ease'
+                          },
+                          cursor: 'default'
+                        }}
+                      >
                         <StyledTableCell padding="checkbox">
                           <Checkbox
                             checked={!!row._id && selectedRows.includes(row._id)}
@@ -603,15 +698,24 @@ export default function BomPage() {
                         </StyledTableCell>
                         <StyledTableCell>
                           <StyledSelect
-                            value={row.electronicCode}
-                            onChange={(e) => handleCodeSelect(row._id || 'temp', e.target.value as string)}
+                            value={row.parentCode}
+                            onClick={() => handleParentCodeSearchOpen(row._id || '')}
+                            sx={{ cursor: 'pointer' }}
                           >
-                            <MenuItem value="">선택</MenuItem>
-                            {codeItems.map(item => (
-                              <MenuItem key={item._id} value={item.electronicCode}>
-                                {item.electronicCode}
-                              </MenuItem>
-                            ))}
+                            <MenuItem value={row.parentCode || ""}>
+                              {row.parentCode || "선택"}
+                            </MenuItem>
+                          </StyledSelect>
+                        </StyledTableCell>
+                        <StyledTableCell>
+                          <StyledSelect
+                            value={row.electronicCode}
+                            onClick={() => handleCodeSearchOpen(row._id || '')}
+                            sx={{ cursor: 'pointer' }}
+                          >
+                            <MenuItem value={row.electronicCode || ""}>
+                              {row.electronicCode || "선택"}
+                            </MenuItem>
                           </StyledSelect>
                         </StyledTableCell>
                         <StyledTableCell>{row.itemName}</StyledTableCell>
@@ -620,6 +724,7 @@ export default function BomPage() {
                             value={row.quantity}
                             onChange={(e) => row._id && handleRowChange(row._id, 'quantity', Number(e.target.value))}
                             type="number"
+                            aria-label={`행 ${row.no}의 소요량`}
                           />
                         </StyledTableCell>
                         <StyledTableCell>{row.unit}</StyledTableCell>
@@ -627,6 +732,7 @@ export default function BomPage() {
                           <StyledTextField
                             value={row.process}
                             onChange={(e) => row._id && handleRowChange(row._id, 'process', e.target.value)}
+                            aria-label={`행 ${row.no}의 공정`}
                           />
                         </StyledTableCell>
                         <StyledTableCell>
@@ -658,6 +764,18 @@ export default function BomPage() {
           </Grid>
         </Grid>
       </Paper>
+      <CodeSearchPopup
+        open={isCodeSearchOpen}
+        onClose={() => setIsCodeSearchOpen(false)}
+        onSelect={handleCodeSearchSelect}
+        codeItems={codeItems}
+      />
+      <CodeSearchPopup
+        open={isParentCodeSearchOpen}
+        onClose={() => setIsParentCodeSearchOpen(false)}
+        onSelect={handleParentCodeSelect}
+        codeItems={codeItems}
+      />
     </Container>
   );
 } 

@@ -6,19 +6,26 @@ if (!MONGODB_URI) {
   throw new Error('Please define the MONGODB_URI environment variable inside .env');
 }
 
+const options = {
+  useNewUrlParser: true,
+  useUnifiedTopology: true,
+  serverSelectionTimeoutMS: 30000,
+  socketTimeoutMS: 30000,
+  connectTimeoutMS: 30000,
+};
+
 async function dbConnect() {
   try {
     if (mongoose.connections[0].readyState) {
-      console.log('Using existing MongoDB connection');
-      return;
+      return mongoose;
     }
 
-    await mongoose.connect(MONGODB_URI);
-    console.log('MongoDB Connected Successfully');
+    await mongoose.connect(MONGODB_URI, options);
+    console.log('MongoDB connected successfully');
+    return mongoose;
   } catch (error) {
-    console.error('MongoDB Connection Error:', error);
-    console.error('Connection String:', MONGODB_URI);
-    throw new Error('Error connecting to database');
+    console.error('MongoDB connection error:', error);
+    throw error;
   }
 }
 

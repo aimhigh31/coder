@@ -1,81 +1,20 @@
 import mongoose from 'mongoose';
 
 const BomSchema = new mongoose.Schema({
-  no: {
-    type: Number,
-    required: true,
-    unique: true,
-    min: 1
-  },
-  industry: {
-    type: String,
-    default: '',
-    trim: true
-  },
-  model: {
-    type: String,
-    default: ''
-  },
-  itemType: {
-    type: String,
-    required: true,
-    default: '제품'
-  },
-  level: {
-    type: Number,
-    required: true,
-    default: 1
-  },
-  electronicCode: {
-    type: String,
-    default: ''
-  },
-  itemName: {
-    type: String,
-    default: ''
-  },
-  quantity: {
-    type: Number,
-    required: true,
-    default: 0
-  },
-  unit: {
-    type: String,
-    default: ''
-  },
-  process: {
-    type: String,
-    default: ''
-  },
-  note: {
-    type: String,
-    default: ''
-  },
-  createdAt: {
-    type: Date,
-    default: Date.now
-  },
-  updatedAt: {
-    type: Date,
-    default: Date.now
-  }
+  no: { type: Number, required: true },
+  industry: { type: String, default: '' },
+  model: { type: String, default: '' },
+  itemType: { type: String, default: '제품' },
+  level: { type: Number, default: 1 },
+  parentCode: { type: String, default: '' },
+  electronicCode: { type: String, required: true },
+  itemName: { type: String, required: true },
+  quantity: { type: Number, default: 0 },
+  unit: { type: String, default: 'EA' },
+  process: { type: String, default: '' },
+  note: { type: String, default: '' }
 }, {
-  timestamps: true,
-  versionKey: false,
-  collection: 'boms'
-});
-
-BomSchema.pre('save', function(next) {
-  if (this.isNew) {
-    this.createdAt = new Date();
-  }
-  this.updatedAt = new Date();
-  next();
-});
-
-BomSchema.pre('findOneAndUpdate', function(next) {
-  this.set({ updatedAt: new Date() });
-  next();
+  timestamps: true
 });
 
 export default mongoose.models.Bom || mongoose.model('Bom', BomSchema); 

@@ -20,6 +20,7 @@ import {
   InputLabel,
   CircularProgress,
   Pagination,
+  SelectChangeEvent,
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import * as XLSX from 'xlsx';
@@ -80,6 +81,15 @@ const ControlButton = styled(Button)(({ theme }) => ({
   fontSize: '13px',
 }));
 
+const ExcelButton = styled(Button)(({ theme }) => ({
+  marginLeft: '8px',
+  fontSize: '13px',
+  backgroundColor: '#4caf50',
+  '&:hover': {
+    backgroundColor: '#388e3c',
+  },
+}));
+
 const LoadingOverlay = styled(Box)(({ theme }) => ({
   position: 'absolute',
   top: 0,
@@ -123,6 +133,7 @@ export default function NexplusCoder() {
   const [page, setPage] = useState(1);
   const rowsPerPage = 10;
   const [originalRows, setOriginalRows] = useState<any[]>([]);
+  const [filteredRows, setFilteredRows] = useState<any[]>([]);
 
   const totalPages = Math.ceil(rows.length / rowsPerPage);
   const displayedRows = rows.slice(
@@ -133,6 +144,10 @@ export default function NexplusCoder() {
   useEffect(() => {
     fetchItems();
   }, []);
+
+  useEffect(() => {
+    filterRows();
+  }, [filters, originalRows]);
 
   const fetchItems = async () => {
     setLoading(true);
@@ -155,32 +170,33 @@ export default function NexplusCoder() {
     }
   };
 
-  const handleFilterChange = (field: string) => (event: any) => {
+  const filterRows = () => {
+    const filtered = originalRows.filter(row => {
+      return (
+        (!filters.industry || row.industry === filters.industry) &&
+        (!filters.division || row.division === filters.division) &&
+        (!filters.partGroup || row.partGroup === filters.partGroup) &&
+        (!filters.code || row.electronicCode.toLowerCase().includes(filters.code.toLowerCase())) &&
+        (!filters.name || row.itemName.toLowerCase().includes(filters.name.toLowerCase())) &&
+        (!filters.model || row.model.toLowerCase().includes(filters.model.toLowerCase()))
+      );
+    });
+    setRows(filtered);
+  };
+
+  const handleSelectChange = (field: string) => (event: SelectChangeEvent<unknown>) => {
     const newFilters = {
       ...filters,
-      [field]: event.target.value
+      [field]: event.target.value as string
     };
     setFilters(newFilters);
+  };
 
-    if (Object.values(newFilters).every(value => !value)) {
-      setRows(originalRows);
-    } else {
-      const filteredRows = originalRows.filter(row => {
-        const matchIndustry = !newFilters.industry || row.industry === newFilters.industry;
-        const matchDivision = !newFilters.division || row.division === newFilters.division;
-        const matchPartGroup = !newFilters.partGroup || row.partGroup === newFilters.partGroup;
-        const matchCode = !newFilters.code || 
-          row.electronicCode?.toLowerCase().includes(newFilters.code.toLowerCase());
-        const matchName = !newFilters.name || 
-          row.itemName?.toLowerCase().includes(newFilters.name.toLowerCase());
-        const matchModel = !newFilters.model || 
-          row.model?.toLowerCase().includes(newFilters.model.toLowerCase());
-
-        return matchIndustry && matchDivision && matchPartGroup && 
-               matchCode && matchName && matchModel;
-      });
-      setRows(filteredRows);
-    }
+  const handleTextFieldChange = (field: string) => (event: React.ChangeEvent<HTMLInputElement>) => {
+    setFilters(prev => ({
+      ...prev,
+      [field]: event.target.value
+    }));
   };
 
   const filterItems = () => {
@@ -217,41 +233,37 @@ export default function NexplusCoder() {
   };
 
   const addRow = async () => {
-    setLoading(true);
     setError(null);
     try {
+      const lastItem = rows.length > 0 
+        ? Math.max(...rows.map(row => row.no))
+        : 0;
+      const nextNo = lastItem + 1;
+
       const newRow = {
-        no: rows.length + 1,
+        _id: `temp-${Date.now()}-${nextNo}`,
+        no: nextNo,
         datetime: getCurrentDateTime(),
         division: 'A',
         industry: 'E',
         partGroup: 'A00',
         revision: 'A',
+        electronicCode: `A-E-A00-${String(nextNo).padStart(5, '0')}A`,
+        itemName: '신규품목',
         itemType: '제품',
         status: '양산',
         unit: 'EA',
+        model: '',
+        accountCode: '',
+        note: '',
+        author: ''
       };
 
-      const response = await fetch('/api/items', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
-        body: JSON.stringify(newRow),
-      });
-
-      const result = await response.json();
-
-      if (!result.success) {
-        throw new Error(result.error || 'Failed to add item');
-      }
-
-      setRows(prev => [result.data, ...prev]);
+      setRows(prev => [newRow, ...prev]);
+      setError(null);
     } catch (error) {
       console.error('Failed to add item:', error);
-      setError(error instanceof Error ? error.message : 'Failed to add item');
-    } finally {
-      setLoading(false);
+      setError(error instanceof Error ? error.message : '행 추가에 실패했습니다');
     }
   };
 
@@ -273,8 +285,27 @@ export default function NexplusCoder() {
 
   const saveData = async () => {
     try {
+      setLoading(true);
+      const newRows = rows.filter(row => row._id?.startsWith('temp-'));
+      const existingRows = rows.filter(row => !row._id?.startsWith('temp-'));
+
+      if (newRows.length > 0) {
+        for (const row of newRows) {
+          const { _id, ...newRow } = row;
+          const response = await fetch('/api/items', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(newRow),
+          });
+
+          if (!response.ok) {
+            throw new Error(`행 ${row.no} 저장 실패`);
+          }
+        }
+      }
+
       await Promise.all(
-        rows.map((row) =>
+        existingRows.map((row) =>
           fetch(`/api/items/${row._id}`, {
             method: 'PUT',
             headers: {
@@ -284,10 +315,14 @@ export default function NexplusCoder() {
           })
         )
       );
+
+      await fetchItems();
       alert('저장되었습니다.');
     } catch (error) {
       console.error('Failed to save items:', error);
       alert('저장 중 오류가 발생했습니다.');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -342,11 +377,34 @@ export default function NexplusCoder() {
     }
   };
 
-  const handleRowChange = async (id: string, field: string, value: any) => {
+  const handleRowChange = (id: string, field: string, value: any) => {
     setRows(prev => prev.map(row => {
       if (row._id === id) {
         const updatedRow = { ...row, [field]: value };
-        if (['division', 'industry', 'partGroup', 'revision'].includes(field)) {
+        
+        if (field === 'division') {
+          switch (value) {
+            case 'A':
+              updatedRow.itemType = '제품';
+              break;
+            case 'B':
+              updatedRow.itemType = '상품';
+              break;
+            case 'C':
+              updatedRow.itemType = '반제품';
+              break;
+            case 'D':
+              updatedRow.itemType = '원자재';
+              break;
+            case 'E':
+              updatedRow.itemType = '부자재';
+              break;
+            default:
+              updatedRow.itemType = '';
+          }
+        }
+
+        if (['division', 'industry', 'partGroup', 'no', 'revision'].includes(field)) {
           updatedRow.electronicCode = `${updatedRow.division}-${updatedRow.industry}-${updatedRow.partGroup}-${String(updatedRow.no).padStart(5, '0')}${updatedRow.revision}`;
         }
         return updatedRow;
@@ -373,12 +431,6 @@ export default function NexplusCoder() {
 
   return (
     <Container maxWidth={false} sx={{ p: 2 }}>
-      <Paper sx={{ p: 2, mb: 2, textAlign: 'right' }}>
-        <Typography variant="h5" color="primary">
-          NEXPLUS CODER 1.0
-        </Typography>
-      </Paper>
-
       <Paper sx={{ p: 2 }}>
         {error && (
           <Box sx={{ color: 'error.main', textAlign: 'center', my: 2 }}>
@@ -393,7 +445,7 @@ export default function NexplusCoder() {
                 <FilterGroup>
                   <InputLabel>산업군</InputLabel>
                   <FormControl fullWidth size="small">
-                    <StyledSelect value={filters.industry} onChange={handleFilterChange('industry')}>
+                    <StyledSelect value={filters.industry} onChange={handleSelectChange('industry')} aria-label="산업군 선택">
                       <MenuItem value="">전체</MenuItem>
                       <MenuItem value="E">E 전기차</MenuItem>
                       <MenuItem value="H">H 수소</MenuItem>
@@ -406,7 +458,7 @@ export default function NexplusCoder() {
                 <FilterGroup>
                   <InputLabel>대분류</InputLabel>
                   <FormControl fullWidth size="small">
-                    <StyledSelect value={filters.division} onChange={handleFilterChange('division')}>
+                    <StyledSelect value={filters.division} onChange={handleSelectChange('division')}>
                       <MenuItem value="">전체</MenuItem>
                       {['A', 'B', 'C', 'D', 'E'].map(div => (
                         <MenuItem key={div} value={div}>{div}</MenuItem>
@@ -419,7 +471,7 @@ export default function NexplusCoder() {
                 <FilterGroup>
                   <InputLabel>부품군</InputLabel>
                   <FormControl fullWidth size="small">
-                    <StyledSelect value={filters.partGroup} onChange={handleFilterChange('partGroup')}>
+                    <StyledSelect value={filters.partGroup} onChange={handleSelectChange('partGroup')}>
                       <MenuItem value="">전체</MenuItem>
                       <MenuItem value="A00">A00 S/Can</MenuItem>
                       <MenuItem value="B00">B00 Busbar</MenuItem>
@@ -446,7 +498,7 @@ export default function NexplusCoder() {
                     size="small"
                     fullWidth
                     value={filters.code}
-                    onChange={handleFilterChange('code')}
+                    onChange={handleTextFieldChange('code')}
                   />
                 </FilterGroup>
               </Grid>
@@ -457,7 +509,8 @@ export default function NexplusCoder() {
                     size="small"
                     fullWidth
                     value={filters.name}
-                    onChange={handleFilterChange('name')}
+                    onChange={handleTextFieldChange('name')}
+                    aria-label="품목명 필터"
                   />
                 </FilterGroup>
               </Grid>
@@ -468,14 +521,31 @@ export default function NexplusCoder() {
                     size="small"
                     fullWidth
                     value={filters.model}
-                    onChange={handleFilterChange('model')}
+                    onChange={handleTextFieldChange('model')}
                   />
                 </FilterGroup>
               </Grid>
               <Grid item xs={1.2}>
-                <SearchButton variant="contained" onClick={filterItems} fullWidth>
-                  조회
-                </SearchButton>
+                <ControlButton
+                  variant="contained"
+                  onClick={() => setFilters({
+                    industry: '',
+                    division: '',
+                    partGroup: '',
+                    code: '',
+                    name: '',
+                    model: '',
+                  })}
+                  sx={{
+                    backgroundColor: '#6c757d',
+                    '&:hover': {
+                      backgroundColor: '#5a6268',
+                    },
+                  }}
+                  fullWidth
+                >
+                  필터 초기화
+                </ControlButton>
               </Grid>
             </Grid>
           </Grid>
@@ -484,20 +554,21 @@ export default function NexplusCoder() {
             <ControlButton variant="contained" onClick={addRow}>행 추가</ControlButton>
             <ControlButton variant="contained" onClick={removeSelectedRows}>행 제거</ControlButton>
             <ControlButton variant="contained" onClick={saveData}>저장</ControlButton>
-            <ControlButton variant="contained" onClick={exportToExcel}>엑셀 다운로드</ControlButton>
+            <ExcelButton variant="contained" onClick={exportToExcel}>엑셀 다운로드</ExcelButton>
             <input
               type="file"
               accept=".xlsx,.xls"
               style={{ display: 'none' }}
               id="excel-upload"
               onChange={importExcel}
+              aria-label="엑셀 파일 업로드"
             />
-            <ControlButton
+            <ExcelButton
               variant="contained"
               onClick={() => document.getElementById('excel-upload')?.click()}
             >
               엑셀 업로드
-            </ControlButton>
+            </ExcelButton>
           </Grid>
 
           <Grid item xs={12}>
@@ -536,10 +607,19 @@ export default function NexplusCoder() {
                   </TableHead>
                   <TableBody>
                     {displayedRows.map((row) => (
-                      <TableRow key={row._id}>
+                      <TableRow 
+                        key={row._id}
+                        sx={{
+                          '&:hover': {
+                            backgroundColor: 'rgba(0, 0, 0, 0.04)',
+                            transition: 'background-color 0.2s ease'
+                          },
+                          cursor: 'default'
+                        }}
+                      >
                         <StyledTableCell padding="checkbox">
                           <Checkbox
-                            checked={selectedRows.includes(row._id)}
+                            checked={!!row._id && selectedRows.includes(row._id)}
                             onChange={() => handleRowSelect(row._id)}
                           />
                         </StyledTableCell>
