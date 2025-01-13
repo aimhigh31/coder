@@ -1,0 +1,757 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <title>NEXPLUS CODER 1.0</title>
+    <style>
+        :root {
+            --primary-color: #1976D2;
+            --secondary-color: #f8f9fa;
+            --border-color: #e0e0e0;
+            --hover-color: #f5f5f5;
+            --text-color: #333;
+            --shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background-color: #f5f5f5;
+            color: var(--text-color);
+            font-size: 13px;
+        }
+
+        .header {
+            text-align: center;
+            padding: 20px;
+            background-color: white;
+            margin-bottom: 20px;
+            box-shadow: var(--shadow);
+            border-radius: 8px;
+        }
+
+        .header h1 {
+            margin: 0;
+            color: var(--primary-color);
+            font-weight: 500;
+            text-align: right;
+            font-size: 20px;
+        }
+
+        .content-wrapper {
+            background-color: white;
+            padding: 24px;
+            border-radius: 8px;
+            box-shadow: var(--shadow);
+            max-width: 98%;
+            margin: 0 auto;
+        }
+
+        .filters {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin-bottom: 20px;
+        }
+
+        .filter-group {
+            display: flex;
+            flex-direction: column;
+            min-width: 150px;
+        }
+
+        .filter-group label {
+            margin-bottom: 8px;
+            font-weight: 500;
+            color: var(--text-color);
+            font-size: 13px;
+        }
+
+        .controls {
+            margin: 20px 0;
+            text-align: right;
+        }
+
+        .controls button {
+            margin-left: 10px;
+            padding: 8px 16px;
+            background-color: var(--primary-color);
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: background-color 0.3s;
+            font-size: 13px;
+        }
+
+        .controls button:hover {
+            background-color: #1565C0;
+        }
+
+        table {
+            border-collapse: collapse;
+            width: 100%;
+            margin-bottom: 20px;
+        }
+
+        th, td {
+            border: 1px solid var(--border-color);
+            padding: 8px;
+            text-align: left;
+            font-size: 13px;
+        }
+
+        th {
+            background-color: var(--secondary-color);
+            font-weight: 500;
+            white-space: nowrap;
+        }
+
+        /* 컬럼 너비 조정 */
+        .col-checkbox { width: 30px; }
+        .col-no { width: 40px; }
+        .col-date { width: 160px; }
+        .col-electronic-code { width: 150px; }
+        .col-division { width: 60px; }
+        .col-industry { width: 100px; }
+        .col-part { width: 120px; }
+        .col-revision { width: 60px; }
+        .col-name { width: 350px; }
+        .col-type { width: 80px; }
+        .col-status { width: 70px; }
+        .col-unit { width: 60px; }
+        .col-model { width: 150px; }
+        .col-account { width: 100px; }
+        .col-note { width: 150px; }
+        .col-author { width: 100px; }
+
+        tr:hover {
+            background-color: var(--hover-color);
+        }
+
+        tr.selected {
+            background-color: #e3f2fd;
+        }
+
+        select, input {
+            width: 100%;
+            padding: 6px;
+            border: 1px solid var(--border-color);
+            border-radius: 4px;
+            box-sizing: border-box;
+            font-size: 13px;
+        }
+
+        input[readonly] {
+            background-color: var(--secondary-color);
+            cursor: not-allowed;
+        }
+
+        .pagination {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 8px;
+            margin-top: 20px;
+        }
+
+        .pagination button {
+            padding: 8px 12px;
+            border: 1px solid var(--border-color);
+            background-color: white;
+            cursor: pointer;
+            border-radius: 4px;
+            transition: all 0.3s;
+            font-size: 13px;
+            min-width: 40px;
+        }
+
+        .pagination button:hover {
+            background-color: var(--hover-color);
+        }
+
+        .pagination button.active {
+            background-color: var(--primary-color);
+            color: white;
+            border-color: var(--primary-color);
+        }
+
+        .checkbox-cell {
+            text-align: center;
+        }
+
+        .checkbox-cell input[type="checkbox"] {
+            width: auto;
+        }
+
+        /* 전산코드 스타일 */
+        .electronic-code {
+            background-color: #e3f2fd;
+        }
+
+        .search-button {
+            background-color: #6c757d;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            padding: 6px 12px;
+            cursor: pointer;
+            width: 100%;
+        }
+
+        .search-button:hover {
+            background-color: #5a6268;
+        }
+
+        .excel-button {
+            background-color: #1976D2 !important;
+        }
+
+        .excel-button:hover {
+            background-color: #1565C0 !important;
+        }
+    </style>
+    <script src="https://unpkg.com/xlsx/dist/xlsx.full.min.js"></script>
+</head>
+<body>
+    <div class="header">
+        <h1>NEXPLUS CODER 1.0</h1>
+    </div>
+
+    <div class="content-wrapper">
+        <div class="filters">
+            <div class="filter-group">
+                <label>산업군</label>
+                <select id="industryFilter">
+                    <option value="">전체</option>
+                    <option value="E">E 전기차</option>
+                    <option value="H">H 수소</option>
+                    <option value="I">I IT</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label>대분류</label>
+                <select id="divisionFilter">
+                    <option value="">전체</option>
+                    <option value="A">A</option>
+                    <option value="B">B</option>
+                    <option value="C">C</option>
+                    <option value="D">D</option>
+                    <option value="E">E</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label>부품군</label>
+                <select id="partFilter">
+                    <option value="">전체</option>
+                    <option value="A00">A00 S/Can</option>
+                    <option value="B00">B00 Busbar</option>
+                    <option value="C00">C00 Connector</option>
+                    <!-- ... 기타 부품군 옵션들 ... -->
+                </select>
+            </div>
+            <div class="filter-group">
+                <label>전산코드</label>
+                <input type="text" id="codeFilter" placeholder="검색">
+            </div>
+            <div class="filter-group">
+                <label>품목명</label>
+                <input type="text" id="nameFilter" placeholder="검색">
+            </div>
+            <div class="filter-group">
+                <label>모델</label>
+                <input type="text" id="modelFilter" placeholder="검색">
+            </div>
+            <div class="filter-group">
+                <label>&nbsp;</label>
+                <button onclick="filterTable()" class="search-button">조회</button>
+            </div>
+        </div>
+
+        <div class="controls">
+            <button onclick="addRow()">행 추가</button>
+            <button onclick="removeSelectedRows()">행 제거</button>
+            <button onclick="saveData()">저장</button>
+            <button onclick="exportToExcel()" class="excel-button">엑셀 다운로드</button>
+            <input type="file" id="excelFile" style="display: none" onchange="importExcel(this)">
+            <button onclick="document.getElementById('excelFile').click()" class="excel-button">엑셀 업로드</button>
+        </div>
+
+        <table id="dataTable">
+            <thead>
+                <tr>
+                    <th class="col-checkbox"><input type="checkbox" onclick="toggleAllCheckboxes(this)"></th>
+                    <th class="col-no">NO</th>
+                    <th class="col-date">등록일시</th>
+                    <th class="col-electronic-code">전산코드</th>
+                    <th class="col-division">대분류</th>
+                    <th class="col-industry">산업군</th>
+                    <th class="col-part">부품군</th>
+                    <th class="col-revision">리비전</th>
+                    <th class="col-name">품목명</th>
+                    <th class="col-type">품목유형</th>
+                    <th class="col-status">양산/개발</th>
+                    <th class="col-unit">단위</th>
+                    <th class="col-model">모델</th>
+                    <th class="col-account">회계코드</th>
+                    <th class="col-note">비고</th>
+                    <th class="col-author">작성자</th>
+                </tr>
+            </thead>
+            <tbody>
+            </tbody>
+        </table>
+
+        <div class="pagination" id="pagination">
+        </div>
+    </div>
+
+    <script>
+        let rowCounter = 1;
+        const rowsPerPage = 14;
+        let currentPage = 1;
+        const storageKey = 'nexplus_coder_data';
+
+        window.onload = function() {
+            loadSavedData();
+        };
+
+        function loadSavedData() {
+            const savedData = localStorage.getItem(storageKey);
+            if (savedData) {
+                const data = JSON.parse(savedData);
+                data.sort((a, b) => Number(b.no) - Number(a.no));
+                data.forEach(rowData => {
+                    addRow(rowData);
+                });
+            } else {
+                addRow();
+            }
+        }
+
+        function getCurrentDateTime() {
+            const now = new Date();
+            return now.getFullYear() + '-' + 
+                   String(now.getMonth() + 1).padStart(2, '0') + '-' + 
+                   String(now.getDate()).padStart(2, '0') + ' ' + 
+                   String(now.getHours()).padStart(2, '0') + ':' + 
+                   String(now.getMinutes()).padStart(2, '0');
+        }
+
+        function addRow(savedData = null) {
+            const tbody = document.querySelector('tbody');
+            const datetime = savedData ? savedData.datetime : getCurrentDateTime();
+            rowCounter = document.querySelectorAll('tbody tr').length + 1;
+            
+            const row = document.createElement('tr');
+            const cells = [
+                `<td class="checkbox-cell"><input type="checkbox"></td>`,
+                `<td>${rowCounter}</td>`,
+                `<td><input type="text" value="${datetime}" readonly></td>`,
+                `<td class="electronic-code"></td>`,
+                `<td><select onchange="updateItemType(this)">
+                    <option value="A">A</option>
+                    <option value="B">B</option>
+                    <option value="C">C</option>
+                    <option value="D">D</option>
+                    <option value="E">E</option>
+                </select></td>`,
+                `<td><select>
+                    <option value="E">E 전기차</option>
+                    <option value="H">H 수소</option>
+                    <option value="I">I IT</option>
+                </select></td>`,
+                `<td><select>
+                    <option value="A00">A00 S/Can</option>
+                    <option value="B00">B00 Busbar</option>
+                    <option value="C00">C00 Connector</option>
+                    <option value="D00">D00 DummyPlate</option>
+                    <option value="E00">E00 EndPlate</option>
+                    <option value="F00">F00 Foldable</option>
+                    <option value="G00">G00 Slidable</option>
+                    <option value="R00">R00 Rollable</option>
+                    <option value="P00">P00 PorousPlate</option>
+                    <option value="S00">S00 SidePlate</option>
+                    <option value="T00">T00 Tab</option>
+                    <option value="U00">U00 Cell</option>
+                    <option value="V00">V00 BP</option>
+                    <option value="X00">X00 기타</option>
+                </select></td>`,
+                `<td><select>
+                    ${Array.from('ABCDEFGHIJKLMNOPQRSTUVWXYZ').map(letter => 
+                        `<option value="${letter}">${letter}</option>`).join('')}
+                </select></td>`,
+                `<td><input type="text"></td>`,
+                `<td><input type="text" readonly></td>`,
+                `<td><select>
+                    <option value="양산">양산</option>
+                    <option value="개발">개발</option>
+                </select></td>`,
+                `<td><select>
+                    <option value="EA">EA</option>
+                    <option value="Kg">Kg</option>
+                    <option value="M">M</option>
+                </select></td>`,
+                `<td><input type="text"></td>`,
+                `<td><input type="text"></td>`,
+                `<td><input type="text"></td>`,
+                `<td><input type="text"></td>`
+            ];
+
+            row.innerHTML = cells.join('');
+            tbody.insertBefore(row, tbody.firstChild);
+            
+            if (savedData) {
+                populateRowWithData(row, savedData);
+            } else {
+                const divisionSelect = row.cells[4].querySelector('select');
+                updateItemType(divisionSelect);
+            }
+            
+            updateElectronicCode(row);
+            updatePagination();
+        }
+
+        function updateItemType(select) {
+            const row = select.closest('tr');
+            const itemTypeInput = row.cells[9].querySelector('input');
+            const types = {
+                'A': '제품',
+                'B': '상품',
+                'C': '반제품',
+                'D': '원자재',
+                'E': '부자재'
+            };
+            itemTypeInput.value = types[select.value] || '';
+            itemTypeInput.readOnly = true;
+        }
+
+        function updateElectronicCode(row) {
+            const division = row.cells[4].querySelector('select').value;
+            const industry = row.cells[5].querySelector('select').value;
+            const partGroup = row.cells[6].querySelector('select').value;
+            const number = String(row.cells[1].textContent).padStart(5, '0');
+            const revision = row.cells[7].querySelector('select').value;
+            
+            row.cells[3].textContent = `${division}-${industry}-${partGroup}-${number}${revision}`;
+        }
+
+        function removeSelectedRows() {
+            const checkboxes = document.querySelectorAll('tbody input[type="checkbox"]:checked');
+            checkboxes.forEach(checkbox => {
+                checkbox.closest('tr').remove();
+            });
+            updatePagination();
+        }
+
+        function toggleAllCheckboxes(source) {
+            const checkboxes = document.querySelectorAll('tbody input[type="checkbox"]');
+            checkboxes.forEach(checkbox => {
+                checkbox.checked = source.checked;
+                const row = checkbox.closest('tr');
+                if (source.checked) {
+                    row.classList.add('selected');
+                } else {
+                    row.classList.remove('selected');
+                }
+            });
+        }
+
+        function filterTable() {
+            const industryFilter = document.getElementById('industryFilter').value;
+            const divisionFilter = document.getElementById('divisionFilter').value;
+            const partFilter = document.getElementById('partFilter').value;
+            const codeFilter = document.getElementById('codeFilter').value.toLowerCase();
+            const nameFilter = document.getElementById('nameFilter').value.toLowerCase();
+            const modelFilter = document.getElementById('modelFilter').value.toLowerCase();
+
+            const rows = document.querySelectorAll('tbody tr');
+            rows.forEach(row => {
+                const industry = row.cells[5].querySelector('select').value;
+                const division = row.cells[4].querySelector('select').value;
+                const part = row.cells[6].querySelector('select').value;
+                const code = row.cells[3].textContent.toLowerCase();
+                const name = row.cells[8].querySelector('input').value.toLowerCase();
+                const model = row.cells[12].querySelector('input').value.toLowerCase();
+
+                const matchesFilter = 
+                    (!industryFilter || industry === industryFilter) &&
+                    (!divisionFilter || division === divisionFilter) &&
+                    (!partFilter || part === partFilter) &&
+                    (!codeFilter || code.includes(codeFilter)) &&
+                    (!nameFilter || name.includes(nameFilter)) &&
+                    (!modelFilter || model.includes(modelFilter));
+
+                row.style.display = matchesFilter ? '' : 'none';
+            });
+        }
+
+        // 이벤트 리스너 추가
+        document.addEventListener('change', function(e) {
+            if (e.target.tagName === 'SELECT' || e.target.tagName === 'INPUT') {
+                const row = e.target.closest('tr');
+                if (row) {
+                    if (e.target.closest('td') === row.cells[4]) {
+                        updateItemType(e.target);
+                    }
+                    updateElectronicCode(row);
+                }
+            }
+        });
+
+        // 체크박스 클릭 시 행 선택
+        document.addEventListener('click', function(e) {
+            if (e.target.type === 'checkbox' && e.target.closest('tr')) {
+                const row = e.target.closest('tr');
+                row.classList.toggle('selected', e.target.checked);
+            }
+        });
+
+        function saveData() {
+            try {
+                const rows = document.querySelectorAll('tbody tr');
+                const data = Array.from(rows).map(row => ({
+                    checkbox: row.cells[0].querySelector('input').checked,
+                    no: row.cells[1].textContent,
+                    datetime: row.cells[2].querySelector('input').value,
+                    electronicCode: row.cells[3].textContent,
+                    division: row.cells[4].querySelector('select').value,
+                    industry: row.cells[5].querySelector('select').value,
+                    partGroup: row.cells[6].querySelector('select').value,
+                    revision: row.cells[7].querySelector('select').value,
+                    itemName: row.cells[8].querySelector('input').value,
+                    itemType: row.cells[9].querySelector('input').value,
+                    status: row.cells[10].querySelector('select').value,
+                    unit: row.cells[11].querySelector('select').value,
+                    model: row.cells[12].querySelector('input').value,
+                    accountCode: row.cells[13].querySelector('input').value,
+                    note: row.cells[14].querySelector('input').value,
+                    author: row.cells[15].querySelector('input').value
+                }));
+                
+                data.sort((a, b) => Number(b.no) - Number(a.no));
+                localStorage.setItem(storageKey, JSON.stringify(data));
+                alert('데이터가 저장되었습니다.');
+            } catch (error) {
+                console.error('저장 중 오류:', error);
+                alert('저장 중 오류가 발생했습니다: ' + error.message);
+            }
+        }
+
+        function populateRowWithData(row, data) {
+            row.cells[0].querySelector('input').checked = data.checkbox || false;
+            row.cells[1].textContent = data.no;
+            row.cells[2].querySelector('input').value = data.datetime || '';
+            row.cells[3].textContent = data.electronicCode || '';
+            row.cells[4].querySelector('select').value = data.division || 'A';
+            row.cells[5].querySelector('select').value = data.industry || 'E';
+            row.cells[6].querySelector('select').value = data.partGroup || '';
+            row.cells[7].querySelector('select').value = data.revision || 'A';
+            row.cells[8].querySelector('input').value = data.itemName || '';
+            row.cells[9].querySelector('input').value = data.itemType || '';
+            row.cells[10].querySelector('select').value = data.status || '양산';
+            row.cells[11].querySelector('select').value = data.unit || 'EA';
+            row.cells[12].querySelector('input').value = data.model || '';
+            row.cells[13].querySelector('input').value = data.accountCode || '';
+            row.cells[14].querySelector('input').value = data.note || '';
+            row.cells[15].querySelector('input').value = data.author || '';
+        }
+
+        function updatePagination() {
+            const totalRows = document.querySelectorAll('tbody tr').length;
+            const rowsPerPage = 10;
+            
+            if (totalRows > 10) {
+                const totalPages = Math.ceil(totalRows / rowsPerPage);
+                const pagination = document.getElementById('pagination');
+                pagination.innerHTML = '';
+
+                const firstButton = document.createElement('button');
+                firstButton.innerHTML = '&lt;&lt;';
+                firstButton.onclick = () => updatePaginationButtons(1, totalPages);
+                pagination.appendChild(firstButton);
+
+                const prevButton = document.createElement('button');
+                prevButton.innerHTML = '&lt;';
+                prevButton.onclick = () => {
+                    const newPage = Math.max(1, currentPage - 1);
+                    goToPage(newPage);
+                    updatePaginationButtons(Math.max(1, Math.floor((newPage - 5) / 10) * 10 + 1), totalPages);
+                };
+                pagination.appendChild(prevButton);
+
+                const startPage = Math.floor((currentPage - 1) / 10) * 10 + 1;
+                const endPage = Math.min(startPage + 9, totalPages);
+
+                for (let i = startPage; i <= endPage; i++) {
+                    const button = document.createElement('button');
+                    button.textContent = i;
+                    button.onclick = () => {
+                        goToPage(i);
+                        updatePaginationButtons(startPage, totalPages);
+                    };
+                    if (i === currentPage) button.classList.add('active');
+                    pagination.appendChild(button);
+                }
+
+                const nextButton = document.createElement('button');
+                nextButton.innerHTML = '&gt;';
+                nextButton.onclick = () => {
+                    const newPage = Math.min(totalPages, currentPage + 1);
+                    goToPage(newPage);
+                    updatePaginationButtons(Math.floor((newPage - 1) / 10) * 10 + 1, totalPages);
+                };
+                pagination.appendChild(nextButton);
+
+                const lastButton = document.createElement('button');
+                lastButton.innerHTML = '&gt;&gt;';
+                lastButton.onclick = () => updatePaginationButtons(Math.floor((totalPages - 1) / 10) * 10 + 1, totalPages);
+                pagination.appendChild(lastButton);
+
+                showCurrentPage();
+            } else {
+                const pagination = document.getElementById('pagination');
+                pagination.innerHTML = '';
+                showAllRows();
+            }
+        }
+
+        function updatePaginationButtons(startPage, totalPages) {
+            const currentStartPage = Math.floor((startPage - 1) / 10) * 10 + 1;
+            goToPage(startPage);
+            updatePagination();
+        }
+
+        function showCurrentPage() {
+            const rows = document.querySelectorAll('tbody tr');
+            const rowsPerPage = 10;
+            const start = (currentPage - 1) * rowsPerPage;
+            const end = start + rowsPerPage;
+
+            rows.forEach((row, index) => {
+                row.style.display = (index >= start && index < end) ? '' : 'none';
+            });
+        }
+
+        function showAllRows() {
+            const rows = document.querySelectorAll('tbody tr');
+            rows.forEach(row => {
+                row.style.display = '';
+            });
+        }
+
+        function goToPage(page) {
+            currentPage = page;
+            showCurrentPage();
+            const buttons = document.querySelectorAll('.pagination button');
+            buttons.forEach(button => {
+                button.classList.remove('active');
+                if (button.textContent === page.toString()) {
+                    button.classList.add('active');
+                }
+            });
+        }
+
+        // 엑셀 다운로드 함수
+        function exportToExcel() {
+            try {
+                const rows = document.querySelectorAll('tbody tr');
+                const data = Array.from(rows).map(row => ({
+                    NO: row.cells[1].textContent,
+                    등록일시: row.cells[2].querySelector('input').value,
+                    전산코드: row.cells[3].textContent,
+                    대분류: row.cells[4].querySelector('select').value,
+                    산업군: row.cells[5].querySelector('select').value,
+                    부품군: row.cells[6].querySelector('select').value,
+                    리비전: row.cells[7].querySelector('select').value,
+                    품목명: row.cells[8].querySelector('input').value,
+                    품목유형: row.cells[9].querySelector('input').value,
+                    양산개발: row.cells[10].querySelector('select').value,
+                    단위: row.cells[11].querySelector('select').value,
+                    모델: row.cells[12].querySelector('input').value,
+                    회계코드: row.cells[13].querySelector('input').value,
+                    비고: row.cells[14].querySelector('input').value,
+                    작성자: row.cells[15].querySelector('input').value
+                }));
+
+                const worksheet = XLSX.utils.json_to_sheet(data);
+                const workbook = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(workbook, worksheet, "Data");
+                XLSX.writeFile(workbook, "nexplus_coder_data.xlsx");
+            } catch (error) {
+                console.error('엑셀 다운로드 중 오류:', error);
+                alert('엑셀 다운로드 중 오류가 발생했습니다.');
+            }
+        }
+
+        // 엑셀 업로드 함수
+        function importExcel(input) {
+            try {
+                const file = input.files[0];
+                const reader = new FileReader();
+                
+                reader.onload = function(e) {
+                    const data = new Uint8Array(e.target.result);
+                    const workbook = XLSX.read(data, {type: 'array'});
+                    const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+                    const jsonData = XLSX.utils.sheet_to_json(worksheet);
+
+                    // 기존 데이터 삭제
+                    document.querySelector('tbody').innerHTML = '';
+                    
+                    // 새 데이터 추가
+                    jsonData.sort((a, b) => Number(b.NO) - Number(a.NO)).forEach(row => {
+                        addRow({
+                            no: row.NO,
+                            datetime: row.등록일시,
+                            electronicCode: row.전산코드,
+                            division: row.대분류,
+                            industry: row.산업군,
+                            partGroup: row.부품군,
+                            revision: row.리비전,
+                            itemName: row.품목명,
+                            itemType: row.품목유형,
+                            status: row.양산개발,
+                            unit: row.단위,
+                            model: row.모델,
+                            accountCode: row.회계코드,
+                            note: row.비고,
+                            author: row.작성자
+                        });
+                    });
+                    
+                    saveData();
+                    alert('엑셀 데이터가 성공적으로 업로드되었습니다.');
+                };
+                
+                reader.readAsArrayBuffer(file);
+            } catch (error) {
+                console.error('엑셀 업로드 중 오류:', error);
+                alert('엑셀 업로드 중 오류가 발생했습니다.');
+            }
+        }
+
+        // 항상 역순 정렬 유지를 위한 함수 수정
+        function sortRowsByNo() {
+            const tbody = document.querySelector('tbody');
+            const rows = Array.from(tbody.querySelectorAll('tr'));
+            
+            rows.sort((a, b) => {
+                const noA = Number(a.cells[1].textContent);
+                const noB = Number(b.cells[1].textContent);
+                return noB - noA;
+            });
+            
+            rows.forEach(row => tbody.appendChild(row));
+        }
+
+        // addRow 함수 수정 (정렬 추가)
+        const originalAddRow = addRow;
+        addRow = function(savedData = null) {
+            originalAddRow(savedData);
+            sortRowsByNo();
+        };
+    </script>
+</body>
+</html>
