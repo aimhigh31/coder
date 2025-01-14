@@ -338,11 +338,121 @@ export default function CodePage() {
     }
   };
 
-  const exportToExcel = () => {
-    const worksheet = XLSX.utils.json_to_sheet(rows);
+  const exportToExcel = async () => {
+    // 헤더 스타일 설정
+    const headerStyle = {
+      font: { bold: true, color: { rgb: "FFFFFF" } },
+      fill: { fgColor: { rgb: "4472C4" } },
+      alignment: { horizontal: "center", vertical: "center" },
+      border: {
+        top: { style: "thin" },
+        bottom: { style: "thin" },
+        left: { style: "thin" },
+        right: { style: "thin" }
+      }
+    };
+
+    // 데이터 셀 스타일 설정
+    const cellStyle = {
+      alignment: { horizontal: "center", vertical: "center" },
+      border: {
+        top: { style: "thin" },
+        bottom: { style: "thin" },
+        left: { style: "thin" },
+        right: { style: "thin" }
+      }
+    };
+
+    // 헤더 행 생성
+    const headers = [
+      'NO',
+      '등록일시',
+      '전산코드',
+      '대분류',
+      '산업군',
+      '부품군',
+      '리비전',
+      '품목명',
+      '품목유형',
+      '양산/개발',
+      '단위',
+      '모델',
+      '회계코드',
+      '비고',
+      '작성자'
+    ];
+
+    // 데이터 행 생성
+    const data = rows.map(row => [
+      row.no,
+      row.datetime,
+      row.electronicCode,
+      row.division,
+      row.industry === 'E' ? 'E 전기차' : 
+      row.industry === 'H' ? 'H 수소' : 
+      row.industry === 'I' ? 'I IT' : row.industry,
+      row.partGroup,
+      row.revision,
+      row.itemName,
+      row.itemType,
+      row.status,
+      row.unit,
+      row.model || '',
+      row.accountCode || '',
+      row.note || '',
+      row.author || ''
+    ]);
+
+    // 워크시트 생성 및 스타일 적용
+    const ws = XLSX.utils.aoa_to_sheet([headers, ...data]);
+    
+    // 열 너비 및 스타일 설정
+    const columnWidths = [
+      { wch: 5 },  // NO
+      { wch: 15 }, // 등록일시
+      { wch: 20 }, // 전산코드
+      { wch: 8 },  // 대분류
+      { wch: 10 }, // 산업군
+      { wch: 15 }, // 부품군
+      { wch: 8 },  // 리비전
+      { wch: 30 }, // 품목명
+      { wch: 10 }, // 품목유형
+      { wch: 10 }, // 양산/개발
+      { wch: 8 },  // 단위
+      { wch: 15 }, // 모델
+      { wch: 15 }, // 회계코드
+      { wch: 20 }, // 비고
+      { wch: 10 }  // 작성자
+    ];
+    
+    ws['!cols'] = columnWidths;
+
+    // 헤더에 스타일 적용
+    const range = XLSX.utils.decode_range(ws['!ref'] || 'A1');
+    for (let C = range.s.c; C <= range.e.c; ++C) {
+      const address = XLSX.utils.encode_cell({ r: 0, c: C });
+      if (!ws[address]) continue;
+      ws[address].s = headerStyle;
+    }
+
+    // 데이터 셀에 스타일 적용
+    for (let R = 1; R <= range.e.r; ++R) {
+      for (let C = range.s.c; C <= range.e.c; ++C) {
+        const address = XLSX.utils.encode_cell({ r: R, c: C });
+        if (!ws[address]) continue;
+        ws[address].s = cellStyle;
+      }
+    }
+
     const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, 'Items');
-    XLSX.writeFile(workbook, 'nexplus_coder_data.xlsx');
+    XLSX.utils.book_append_sheet(workbook, ws, 'NEXPLUS CODER');
+    
+    // 현재 날짜를 파일명에 포함
+    const today = new Date();
+    const dateStr = `${today.getFullYear()}${String(today.getMonth() + 1).padStart(2, '0')}${String(today.getDate()).padStart(2, '0')}`;
+    const fileName = `NEXPLUS_CODER_${dateStr}.xlsx`;
+
+    XLSX.writeFile(workbook, fileName);
   };
 
   const importExcel = (event: React.ChangeEvent<HTMLInputElement>) => {
