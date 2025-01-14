@@ -162,23 +162,29 @@ export const FilterContainer = styled(Grid)(({ theme }) => ({
   justifyContent: 'space-between',
 }));
 
-export const FilterSelect = styled(StyledSelect)(({ theme }) => ({
+export const FilterSelect = styled(Select)({
   backgroundColor: '#fff',
-  height: '40px'
-}));
+  '& .MuiOutlinedInput-root': {
+    height: '35px',
+  },
+  '& .MuiSelect-select': {
+    fontSize: '14px',
+    padding: '8px 14px',
+  },
+  '& .MuiOutlinedInput-notchedOutline': {
+    borderColor: '#E5E7EB',
+  },
+  '&:hover .MuiOutlinedInput-notchedOutline': {
+    borderColor: '#9CA3AF',
+  },
+  '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+    borderColor: '#6B7280',
+  }
+});
 
 export const ButtonContainer = styled(Grid)(({ theme }) => ({
   display: 'flex', 
   justifyContent: 'flex-end', 
   gap: '8px',
   marginBottom: '8px',
-}));
-
-export const PageContainer = styled(Container)({
-  padding: '3px',
-});
-
-export const PagePaper = styled(Paper)({
-  padding: '16px',
-  backgroundColor: '#f5f5f5',
-}); 
+})); 

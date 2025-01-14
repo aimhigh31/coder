@@ -505,11 +505,7 @@ export default function BomPage() {
                 <FilterGroup>
                   <InputLabel>품목유형</InputLabel>
                   <FormControl fullWidth size="small">
-                    <StyledSelect
-                      sx={{
-                        backgroundColor: '#fff',
-                        height: '40px'
-                      }}
+                    <FilterSelect
                       value={filters.itemType}
                       onChange={handleSelectChange('itemType')}
                     >
@@ -519,7 +515,7 @@ export default function BomPage() {
                       <MenuItem value="반제품">반제품</MenuItem>
                       <MenuItem value="원자재">원자재</MenuItem>
                       <MenuItem value="부자재">부자재</MenuItem>
-                    </StyledSelect>
+                    </FilterSelect>
                   </FormControl>
                 </FilterGroup>
               </Grid>
@@ -549,8 +545,7 @@ export default function BomPage() {
                 <FilterGroup>
                   <InputLabel>LEVEL</InputLabel>
                   <FormControl fullWidth size="small">
-                    <StyledSelect
-                      sx={{ minWidth: '150px' }}
+                    <FilterSelect
                       value={filters.level}
                       onChange={handleSelectChange('level')}
                     >
@@ -558,7 +553,7 @@ export default function BomPage() {
                       {[1,2,3,4,5,6,7,8,9,10].map(level => (
                         <MenuItem key={level} value={level}>{level}</MenuItem>
                       ))}
-                    </StyledSelect>
+                    </FilterSelect>
                   </FormControl>
                 </FilterGroup>
               </Grid>

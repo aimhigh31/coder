@@ -39,8 +39,6 @@ import {
   FilterContainer,
   FilterSelect,
   ButtonContainer,
-  PageContainer,
-  PagePaper,
 } from '../styles/components';
 
 export default function NexplusCoder() {
@@ -383,12 +381,12 @@ export default function NexplusCoder() {
                 <FilterGroup>
                   <InputLabel>산업군</InputLabel>
                   <FormControl fullWidth size="small">
-                    <StyledSelect value={filters.industry} onChange={handleSelectChange('industry')} aria-label="산업군 선택">
+                    <FilterSelect value={filters.industry} onChange={handleSelectChange('industry')} aria-label="산업군 선택">
                       <MenuItem value="">전체</MenuItem>
                       <MenuItem value="E">E 전기차</MenuItem>
                       <MenuItem value="H">H 수소</MenuItem>
                       <MenuItem value="I">I IT</MenuItem>
-                    </StyledSelect>
+                    </FilterSelect>
                   </FormControl>
                 </FilterGroup>
               </Grid>
@@ -396,12 +394,12 @@ export default function NexplusCoder() {
                 <FilterGroup>
                   <InputLabel>대분류</InputLabel>
                   <FormControl fullWidth size="small">
-                    <StyledSelect value={filters.division} onChange={handleSelectChange('division')}>
+                    <FilterSelect value={filters.division} onChange={handleSelectChange('division')}>
                       <MenuItem value="">전체</MenuItem>
                       {['A', 'B', 'C', 'D', 'E'].map(div => (
                         <MenuItem key={div} value={div}>{div}</MenuItem>
                       ))}
-                    </StyledSelect>
+                    </FilterSelect>
                   </FormControl>
                 </FilterGroup>
               </Grid>
@@ -409,7 +407,7 @@ export default function NexplusCoder() {
                 <FilterGroup>
                   <InputLabel>부품군</InputLabel>
                   <FormControl fullWidth size="small">
-                    <StyledSelect value={filters.partGroup} onChange={handleSelectChange('partGroup')}>
+                    <FilterSelect value={filters.partGroup} onChange={handleSelectChange('partGroup')}>
                       <MenuItem value="">전체</MenuItem>
                       <MenuItem value="A00">A00 S/Can</MenuItem>
                       <MenuItem value="B00">B00 Busbar</MenuItem>
@@ -425,7 +423,7 @@ export default function NexplusCoder() {
                       <MenuItem value="U00">U00 Cell</MenuItem>
                       <MenuItem value="V00">V00 BP</MenuItem>
                       <MenuItem value="X00">X00 기타</MenuItem>
-                    </StyledSelect>
+                    </FilterSelect>
                   </FormControl>
                 </FilterGroup>
               </Grid>

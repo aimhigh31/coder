@@ -447,12 +447,18 @@ export default function CodePage() {
 
         <Grid container spacing={2}>
           <Grid item xs={12}>
-            <Grid container spacing={2} alignItems="flex-end">
+            <Grid container spacing={2} alignItems="center">
               <Grid item xs={1.8}>
                 <FilterGroup>
-                  <InputLabel>산업군</InputLabel>
-                  <FormControl fullWidth size="small">
-                    <StyledSelect value={filters.industry} onChange={handleFilterChange('industry')}>
+                  <InputLabel shrink>
+                    산업군
+                  </InputLabel>
+                  <FormControl fullWidth size="small" sx={{ mt: 1 }}>
+                    <StyledSelect
+                      value={filters.industry}
+                      onChange={handleFilterChange('industry')}
+                      displayEmpty
+                    >
                       <MenuItem value="">전체</MenuItem>
                       <MenuItem value="E">E 전기차</MenuItem>
                       <MenuItem value="H">H 수소</MenuItem>
@@ -463,9 +469,15 @@ export default function CodePage() {
               </Grid>
               <Grid item xs={1.8}>
                 <FilterGroup>
-                  <InputLabel>대분류</InputLabel>
-                  <FormControl fullWidth size="small">
-                    <StyledSelect value={filters.division} onChange={handleFilterChange('division')}>
+                  <InputLabel shrink>
+                    대분류
+                  </InputLabel>
+                  <FormControl fullWidth size="small" sx={{ mt: 1 }}>
+                    <StyledSelect
+                      value={filters.division}
+                      onChange={handleFilterChange('division')}
+                      displayEmpty
+                    >
                       <MenuItem value="">전체</MenuItem>
                       {['A', 'B', 'C', 'D', 'E'].map(div => (
                         <MenuItem key={div} value={div}>{div}</MenuItem>
@@ -476,9 +488,15 @@ export default function CodePage() {
               </Grid>
               <Grid item xs={1.8}>
                 <FilterGroup>
-                  <InputLabel>부품군</InputLabel>
-                  <FormControl fullWidth size="small">
-                    <StyledSelect value={filters.partGroup} onChange={handleFilterChange('partGroup')}>
+                  <InputLabel shrink>
+                    부품군
+                  </InputLabel>
+                  <FormControl fullWidth size="small" sx={{ mt: 1 }}>
+                    <StyledSelect
+                      value={filters.partGroup}
+                      onChange={handleFilterChange('partGroup')}
+                      displayEmpty
+                    >
                       <MenuItem value="">전체</MenuItem>
                       <MenuItem value="A00">A00 S/Can</MenuItem>
                       <MenuItem value="B00">B00 Busbar</MenuItem>
@@ -500,7 +518,9 @@ export default function CodePage() {
               </Grid>
               <Grid item xs={1.8}>
                 <FilterGroup>
-                  <InputLabel>전산코드</InputLabel>
+                  <InputLabel shrink>
+                    전산코드
+                  </InputLabel>
                   <StyledTextField
                     size="small"
                     fullWidth
@@ -511,7 +531,9 @@ export default function CodePage() {
               </Grid>
               <Grid item xs={1.8}>
                 <FilterGroup>
-                  <InputLabel>품목명</InputLabel>
+                  <InputLabel shrink>
+                    품목명
+                  </InputLabel>
                   <StyledTextField
                     size="small"
                     fullWidth
@@ -522,7 +544,9 @@ export default function CodePage() {
               </Grid>
               <Grid item xs={1.8}>
                 <FilterGroup>
-                  <InputLabel>모델</InputLabel>
+                  <InputLabel shrink>
+                    모델
+                  </InputLabel>
                   <StyledTextField
                     size="small"
                     fullWidth
