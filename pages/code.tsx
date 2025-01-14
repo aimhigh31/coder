@@ -20,6 +20,10 @@ import {
   InputLabel,
   CircularProgress,
   Pagination,
+  Dialog,
+  DialogTitle,
+  DialogContent,
+  DialogActions,
 } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import * as XLSX from 'xlsx';
@@ -27,8 +31,7 @@ import {
   StyledTableCell, 
   StyledSelect, 
   StyledTextField, 
-  FilterGroup, 
-  ControlButton,
+  FilterGroup,
   ExcelButton,
   LoadingOverlay,
   TableWrapper,
@@ -36,7 +39,9 @@ import {
   HiddenInput,
   TableContainerStyled,
   PaginationBox,
-  ErrorBox
+  ErrorBox,
+  FilterSelect,
+  ControlButton,
 } from '../styles/components';
 import { SelectChangeEvent } from '@mui/material/Select';
 
@@ -84,6 +89,9 @@ export default function CodePage() {
   const [page, setPage] = useState(1);
   const rowsPerPage = 10;
   const [originalRows, setOriginalRows] = useState<CodeItem[]>([]);
+  const [passwordDialogOpen, setPasswordDialogOpen] = useState(false);
+  const [passwordInput, setPasswordInput] = useState('');
+  const ADMIN_PASSWORD = 'admin1234';
 
   const totalPages = Math.ceil(rows.length / rowsPerPage);
   const displayedRows = rows.slice(
@@ -373,13 +381,32 @@ export default function CodePage() {
     );
   };
 
-  const handleSelectAll = (
-    event: React.ChangeEvent<HTMLInputElement & { checked: boolean }>
-  ) => {
+  const handleSelectAll = (event: React.ChangeEvent<HTMLInputElement>) => {
+    event.preventDefault();
     if (event.target.checked) {
-      setSelectedRows(rows.map((row) => row._id));
+      setPasswordDialogOpen(true);
     } else {
       setSelectedRows([]);
+    }
+  };
+
+  const handlePasswordConfirm = () => {
+    if (passwordInput === ADMIN_PASSWORD) {
+      const validIds = displayedRows
+        .filter(row => row._id)
+        .map(row => row._id);
+      setSelectedRows(validIds);
+      setPasswordDialogOpen(false);
+      setPasswordInput('');
+    } else {
+      alert('비밀번호가 일치하지 않습니다.');
+      setPasswordInput('');
+    }
+  };
+
+  const handlePasswordKeyPress = (event: React.KeyboardEvent) => {
+    if (event.key === 'Enter') {
+      handlePasswordConfirm();
     }
   };
 
@@ -454,7 +481,7 @@ export default function CodePage() {
                     산업군
                   </InputLabel>
                   <FormControl fullWidth size="small" sx={{ mt: 1 }}>
-                    <StyledSelect
+                    <FilterSelect
                       value={filters.industry}
                       onChange={handleFilterChange('industry')}
                       displayEmpty
@@ -463,7 +490,7 @@ export default function CodePage() {
                       <MenuItem value="E">E 전기차</MenuItem>
                       <MenuItem value="H">H 수소</MenuItem>
                       <MenuItem value="I">I IT</MenuItem>
-                    </StyledSelect>
+                    </FilterSelect>
                   </FormControl>
                 </FilterGroup>
               </Grid>
@@ -473,7 +500,7 @@ export default function CodePage() {
                     대분류
                   </InputLabel>
                   <FormControl fullWidth size="small" sx={{ mt: 1 }}>
-                    <StyledSelect
+                    <FilterSelect
                       value={filters.division}
                       onChange={handleFilterChange('division')}
                       displayEmpty
@@ -482,7 +509,7 @@ export default function CodePage() {
                       {['A', 'B', 'C', 'D', 'E'].map(div => (
                         <MenuItem key={div} value={div}>{div}</MenuItem>
                       ))}
-                    </StyledSelect>
+                    </FilterSelect>
                   </FormControl>
                 </FilterGroup>
               </Grid>
@@ -492,7 +519,7 @@ export default function CodePage() {
                     부품군
                   </InputLabel>
                   <FormControl fullWidth size="small" sx={{ mt: 1 }}>
-                    <StyledSelect
+                    <FilterSelect
                       value={filters.partGroup}
                       onChange={handleFilterChange('partGroup')}
                       displayEmpty
@@ -512,7 +539,7 @@ export default function CodePage() {
                       <MenuItem value="U00">U00 Cell</MenuItem>
                       <MenuItem value="V00">V00 BP</MenuItem>
                       <MenuItem value="X00">X00 기타</MenuItem>
-                    </StyledSelect>
+                    </FilterSelect>
                   </FormControl>
                 </FilterGroup>
               </Grid>
@@ -596,8 +623,12 @@ export default function CodePage() {
                     <TableRow>
                       <StyledTableCell padding="checkbox">
                         <Checkbox
-                          checked={selectedRows.length === rows.length}
+                          checked={selectedRows.length > 0 && selectedRows.length === displayedRows.length}
                           onChange={handleSelectAll}
+                          indeterminate={
+                            selectedRows.length > 0 && 
+                            selectedRows.length < displayedRows.length
+                          }
                         />
                       </StyledTableCell>
                       <StyledTableCell>NO</StyledTableCell>
@@ -784,6 +815,31 @@ export default function CodePage() {
           </Grid>
         </Grid>
       </Paper>
+
+      <Dialog open={passwordDialogOpen} onClose={() => setPasswordDialogOpen(false)}>
+        <DialogTitle>관리자 확인</DialogTitle>
+        <DialogContent>
+          <TextField
+            autoFocus
+            margin="dense"
+            label="비밀번호"
+            type="password"
+            fullWidth
+            value={passwordInput}
+            onChange={(e) => setPasswordInput(e.target.value)}
+            onKeyPress={handlePasswordKeyPress}
+          />
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => {
+            setPasswordDialogOpen(false);
+            setPasswordInput('');
+          }}>
+            취소
+          </Button>
+          <Button onClick={handlePasswordConfirm}>확인</Button>
+        </DialogActions>
+      </Dialog>
     </Container>
   );
 } 

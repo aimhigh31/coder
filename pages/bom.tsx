@@ -426,7 +426,14 @@ export default function BomPage() {
 
   const handleSelectAll = (event: React.ChangeEvent<HTMLInputElement>) => {
     if (event.target.checked) {
-      setSelectedRows(rows.filter(row => row._id).map(row => row._id as string));
+      // 비밀번호 확인
+      const password = prompt('관리자 비밀번호를 입력하세요:');
+      if (password === 'admin1234') {
+        setSelectedRows(rows.filter(row => row._id).map(row => row._id as string));
+      } else {
+        event.target.checked = false;  // 체크박스 상태 되돌리기
+        alert('비밀번호가 올바르지 않습니다.');
+      }
     } else {
       setSelectedRows([]);
     }
